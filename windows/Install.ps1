@@ -148,7 +148,10 @@ Ensure 'Python (needed for better PDF to Word)' {
 $dest = Join-Path $env:LOCALAPPDATA 'RightClickConverter'
 if (-not $DryRun) {
     New-Item -ItemType Directory -Path $dest -Force | Out-Null
-    foreach ($f in 'Convert.ps1', 'Launch.vbs', 'pdf2docx_run.py') {
+    # stop a running radial menu so its file can be replaced (upgrade)
+    Get-Process -Name RadialMenu -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 400
+    foreach ($f in 'Convert.ps1', 'Launch.vbs', 'pdf2docx_run.py', 'RadialMenu.exe') {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $f) -Destination $dest -Force
     }
 
@@ -171,7 +174,8 @@ if (-not $DryRun) {
     $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Classes\*\shell\ConvertTo')
     $key.SetValue('', 'Convert to...')
     $cmdKey = $key.CreateSubKey('command')
-    $cmdKey.SetValue('', ('wscript.exe "' + (Join-Path $dest 'Launch.vbs') + '" "%1"'))
+    # the right-click entry opens the same radial ring as the hotkey
+    $cmdKey.SetValue('', ('"' + (Join-Path $dest 'RadialMenu.exe') + '" --pick "%1"'))
     $cmdKey.Close()
     $key.Close()
     Write-Host ''
@@ -187,7 +191,21 @@ if (-not $DryRun) {
         $k.Close()
         Write-Host 'Restarting File Explorer...'
         Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
     }
+
+    # Radial menu: select files in Explorer, press Ctrl+Alt+C, pick a format from the ring
+    Write-Host ''
+    Write-Host 'Radial menu: select file(s) in File Explorer and press Ctrl+Alt+C to get a ring of formats at your mouse pointer.' -ForegroundColor Cyan
+    $ans = Read-Host 'Start the radial menu automatically when you sign in to Windows? (y/n)'
+    $radialExe = Join-Path $dest 'RadialMenu.exe'
+    $run = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Microsoft\Windows\CurrentVersion\Run')
+    if ($ans -match '^[Yy]') { $run.SetValue('RightClickConverterRadial', ('"' + $radialExe + '"')) }
+    else { $run.DeleteValue('RightClickConverterRadial', $false) }
+    $run.Close()
+    # start it now, as the normal user (not elevated)
+    Start-Process explorer.exe -ArgumentList ('"' + $radialExe + '"')
+    Write-Host 'Radial menu started (look for its icon near the clock).' -ForegroundColor Green
 }
 
 Write-Host ''

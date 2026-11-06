@@ -1,4 +1,4 @@
-param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Paths)
+param([string]$Target = '', [Parameter(ValueFromRemainingArguments = $true)][string[]]$Paths)
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
@@ -155,7 +155,10 @@ try {
         exit 1
     }
 
-    # ---- picker
+    # ---- picker (skipped when a target was passed in, e.g. from the radial menu)
+    $t = $null
+    if ($Target -and ($targets -contains $Target.ToLower())) { $t = $Target.ToLower() }
+    if (-not $t) {
     $f = New-Object System.Windows.Forms.Form
     $f.Text = 'Convert to...'
     $f.ClientSize = New-Object System.Drawing.Size(340, 400)
@@ -197,6 +200,7 @@ try {
     $f.Controls.AddRange(@($lbl, $lb, $ok, $cancel))
     if ($f.ShowDialog() -ne 'OK' -or $lb.SelectedIndex -lt 0) { exit 0 }
     $t = ($lb.SelectedItem -split ' ')[0].ToLower()
+    }
 
     # ---- progress window
     $pf = New-Object System.Windows.Forms.Form

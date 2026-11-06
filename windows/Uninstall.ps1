@@ -1,9 +1,13 @@
 $ErrorActionPreference = 'Continue'
 
-# Remove the right-click entry and the converter files (installed tools are left alone)
+# Remove the right-click entry, the radial menu and the converter files (installed tools are left alone)
+Get-Process -Name RadialMenu -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 400
+$run = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Run', $true)
+if ($run) { $run.DeleteValue('RightClickConverterRadial', $false); $run.Close() }
 [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree('Software\Classes\*\shell\ConvertTo', $false)
 Remove-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'RightClickConverter') -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host 'Right-click "Convert to..." removed.' -ForegroundColor Green
+Write-Host 'Right-click "Convert to..." and the radial menu removed.' -ForegroundColor Green
 
 $ans = Read-Host 'Also go back to the default Windows 11 right-click menu? (y/n)'
 if ($ans -match '^[Yy]') {

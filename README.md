@@ -4,6 +4,8 @@ Adds a **Convert to...** entry to the right-click menu. Pick a file, choose the 
 
 Convert images, video, audio, Word / Excel / PowerPoint, PDF, Markdown, HTML and EPUB with two clicks.
 
+**Windows also has a radial menu:** select files, press **Ctrl + Alt + C**, and pick a format from a ring that appears at your mouse pointer.
+
 ![license](https://img.shields.io/badge/license-MIT-green)
 
 ## Pick your system

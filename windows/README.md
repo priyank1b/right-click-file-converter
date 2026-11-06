@@ -1,4 +1,4 @@
-﻿# Right-Click File Converter
+# Right-Click File Converter
 
 Adds a **Convert to...** entry to the Windows right-click menu. Pick a file, choose the format, and the converted copy appears next to the original. Nothing is overwritten, and nothing is uploaded: everything runs on your own PC.
 
@@ -37,6 +37,17 @@ Adds a **Convert to...** entry to the Windows right-click menu. Pick a file, cho
 - An internet connection during install
 - About 3 GB of free disk space
 
+## Radial menu (right-click or hotkey)
+
+Right-clicking a file and choosing **Convert to...** and the hotkey show the same ring. If the selected files are of different types, a message box asks you to pick one type at a time.
+
+To use the keyboard: select file(s) in File Explorer (or on the Desktop) and press **Ctrl + Alt + C**. A ring of output formats appears at your mouse pointer:
+
+- **Hover** a slice to highlight it. The center shows what you're about to convert to.
+- **Click** a slice to convert. **Esc**, a right-click, or a click outside the ring cancels.
+- Select several files of the **same type** (for example all images) to convert them all in one go. If you mix types (say a photo and a video), you get a notice asking you to select one type.
+
+The installer asks whether to start it automatically when you sign in. It lives in the system tray (near the clock); right-click its icon to change the hotkey (Ctrl+Alt+C, Ctrl+Alt+Space, Ctrl+Shift+Space or Win+Shift+C), toggle "Start with Windows", or exit. If the hotkey is already taken by another program, you'll get a notification and can pick a different one.
 ## What gets installed
 
 The installer uses [winget](https://learn.microsoft.com/windows/package-manager/winget/) where possible, and downloads directly (with retries and resume) when a package isn't available.
@@ -70,6 +81,7 @@ Convert.ps1                   the converter UI and logic
 Launch.vbs                    starts Convert.ps1 without a console window
 pdf2docx_run.py               PDF to DOCX helper
 Uninstall.bat / Uninstall.ps1 removes the menu entry and files
+radial/RadialMenu.cs          the hotkey radial menu (tray app, compiled to RadialMenu.exe)
 installer/Setup.cs            source of the self-extracting RightClickConverter-Setup.exe
 ```
 

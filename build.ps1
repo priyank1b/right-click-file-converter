@@ -49,7 +49,20 @@ function Item([string]$name, [string]$src, [string]$eol, [bool]$exec = $false) {
 
 # ---------------------------------------------------------------- Windows
 $win = Join-Path $root 'windows'
+$csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+if (-not (Test-Path -LiteralPath $csc)) { throw 'csc.exe (.NET Framework compiler) not found.' }
+
+# Radial menu app (WPF, compiled with the compiler that ships with Windows)
+$wpf = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\WPF'
+$radialExe = Join-Path $env:TEMP ('RadialMenu_' + [guid]::NewGuid().ToString('N') + '.exe')
+& $csc /nologo /target:winexe /optimize+ "/out:$radialExe" `
+    "/r:$wpf\PresentationCore.dll" "/r:$wpf\PresentationFramework.dll" "/r:$wpf\WindowsBase.dll" `
+    /r:System.Xaml.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:Microsoft.CSharp.dll /r:System.Core.dll `
+    (Join-Path $win 'radial\RadialMenu.cs')
+if ($LASTEXITCODE -ne 0) { throw 'Compiling RadialMenu.exe failed.' }
+
 $winItems = @(
+    (Item 'RadialMenu.exe'   $radialExe                          'keep'),
     (Item 'Install.bat'      (Join-Path $win 'Install.bat')      'crlf'),
     (Item 'Install.ps1'      (Join-Path $win 'Install.ps1')      'crlf'),
     (Item 'Convert.ps1'      (Join-Path $win 'Convert.ps1')      'crlf'),
@@ -68,14 +81,13 @@ New-Package $payload '' $winItems
 try {
     $exe = Join-Path $dist 'RightClickConverter-Setup.exe'
     if (Test-Path -LiteralPath $exe) { [IO.File]::Delete($exe) }
-    $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-    if (-not (Test-Path -LiteralPath $csc)) { throw 'csc.exe (.NET Framework compiler) not found.' }
     & $csc /nologo /target:exe /optimize+ "/out:$exe" "/resource:$payload,payload.zip" `
         /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll `
         (Join-Path $win 'installer\Setup.cs')
     if ($LASTEXITCODE -ne 0) { throw 'Compiling the setup exe failed.' }
 } finally {
     Remove-Item -LiteralPath $payload -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $radialExe -Force -ErrorAction SilentlyContinue
 }
 
 # ---------------------------------------------------------------- macOS
