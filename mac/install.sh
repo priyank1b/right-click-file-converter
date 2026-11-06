@@ -105,6 +105,24 @@ fi
 # files downloaded from the internet carry a quarantine flag; clear it on what we installed
 xattr -dr com.apple.quarantine "$APPDIR" 2>/dev/null || true
 
+# ---------------------------------------------------------------- radial ring menu
+say "Radial ring menu (right-click ring + Control+Option+C hotkey)"
+RING=""
+if xcrun --find swiftc >/dev/null 2>&1; then
+    mkdir -p "$APPDIR/src"
+    cp "$DIR/radial/main.swift" "$APPDIR/src/main.swift"
+    pkill -f "RadialMenu --tray" >/dev/null 2>&1 || true
+    rm -f "$APPDIR/RadialMenu"
+    if swiftc -O "$APPDIR/src/main.swift" -o "$APPDIR/RadialMenu" 2>"$APPDIR/src/build.log"; then
+        RING=1; ok "built"
+    else
+        warn "could not build the ring menu (see $APPDIR/src/build.log) - the right-click entry will use a simple list instead"
+    fi
+else
+    warn "Apple's Command Line Tools are needed for the ring menu. A dialog may open - click Install,"
+    warn "wait for it to finish, then run install.sh again. Until then the right-click entry uses a simple list."
+    xcode-select --install >/dev/null 2>&1 || true
+fi
 # ---------------------------------------------------------------- Finder Quick Action
 say "Finder right-click entry (Quick Action)"
 rm -rf "$SERVICE"
@@ -202,7 +220,7 @@ cat > "$SERVICE/Contents/document.wflow" <<'WFLOW'
 				<key>ActionParameters</key>
 				<dict>
 					<key>COMMAND_STRING</key>
-					<string>"$HOME/Library/Application Support/RightClickConverter/convert.sh" "$@"</string>
+					<string>APP="$HOME/Library/Application Support/RightClickConverter"; if [ -x "$APP/RadialMenu" ]; then "$APP/RadialMenu" --pick "$@"; else "$APP/convert.sh" "$@"; fi</string>
 					<key>CheckedForUserDefaultShell</key>
 					<true/>
 					<key>inputMethod</key>
@@ -298,6 +316,29 @@ fi
 /System/Library/CoreServices/pbs -flush >/dev/null 2>&1 || true
 /System/Library/CoreServices/pbs -update >/dev/null 2>&1 || true
 
+# ---------------------------------------------------------------- start the tray app
+if [ -n "$RING" ]; then
+    AGENT="$HOME/Library/LaunchAgents/com.rightclickconverter.radial.plist"
+    printf "    Start the ring menu (Control+Option+C) automatically when you log in? (y/n) "
+    read -r ans
+    if [ "$ans" = "y" ] || [ "$ans" = "Y" ]; then
+        mkdir -p "$HOME/Library/LaunchAgents"
+        cat > "$AGENT" <<AGENTPLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>Label</key><string>com.rightclickconverter.radial</string>
+<key>ProgramArguments</key><array><string>$APPDIR/RadialMenu</string><string>--tray</string></array>
+<key>RunAtLoad</key><true/>
+</dict></plist>
+AGENTPLIST
+        launchctl unload "$AGENT" >/dev/null 2>&1 || true
+        launchctl load "$AGENT" >/dev/null 2>&1 || nohup "$APPDIR/RadialMenu" --tray >/dev/null 2>&1 &
+    else
+        nohup "$APPDIR/RadialMenu" --tray >/dev/null 2>&1 &
+    fi
+    ok "ring menu running (look for the icon in the menu bar)"
+fi
 echo
 if [ -n "$FAILED" ]; then
     printf '\033[1;31mThese did not install - check your internet connection and run install.sh again (finished items are skipped):\033[0m'
@@ -306,7 +347,8 @@ if [ -n "$FAILED" ]; then
 fi
 printf '\033[1;32mAll done.\033[0m\n'
 echo
-echo "To use it: right-click (or Control-click) any file in Finder > Quick Actions > Convert to..."
+echo "To use it: right-click (or Control-click) any file in Finder > Quick Actions > Convert to...,"
+echo "or select files in Finder and press Control+Option+C. Both show the same ring."
 echo "If the entry is missing: System Settings > Keyboard > Keyboard Shortcuts > Services (or Extensions >"
 echo "Finder) and tick 'Convert to...'. You may also need to log out and back in once."
-echo "The first conversion may ask permission for 'Terminal'/'Finder' to control files - click OK."
+echo "The first use may ask permission for 'Terminal'/'Finder' to control files - click OK."

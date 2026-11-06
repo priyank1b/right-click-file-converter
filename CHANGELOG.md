@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-11-06
+
+### Added
+- **macOS radial ring menu**: right-click a file in Finder (Quick Actions > Convert to...) or select files and press **Control + Option + C**, and the same glassy ring of formats appears at the mouse pointer. Hover to highlight, click to convert, Esc to cancel.
+- macOS menu-bar app (⟳) with "Convert selected Finder files", "Start at login" and Quit. The installer builds it from mac/radial/main.swift with the Xcode Command Line Tools and offers to start it at login.
+- macOS: selecting different types of files shows a message asking for one type, instead of converting only some of them.
+- convert.sh accepts --targets <files> (lists the output formats) and --target <fmt> <files> (converts without the list picker).
+
+### Changed
+- The macOS Quick Action opens the ring when the ring app is built, and falls back to the plain list picker otherwise.
+- The macOS uninstaller also removes the ring menu and its login item.
+- The Windows build is unchanged from 1.2.0.
+
 ## [1.2.0] - 2026-11-06
 
 ### Added

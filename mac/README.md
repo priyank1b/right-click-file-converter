@@ -1,6 +1,6 @@
 # Right-Click File Converter for macOS
 
-Adds **Convert to...** to the Finder right-click menu (under **Quick Actions**). Pick a file, choose the format, and the converted copy appears next to the original. Nothing is overwritten, and nothing is uploaded: everything runs on your own Mac.
+Adds **Convert to...** to the Finder right-click menu (under **Quick Actions**). Pick a file, choose the format from a glassy ring at your mouse pointer, and the converted copy appears next to the original. Nothing is overwritten, and nothing is uploaded: everything runs on your own Mac.
 
 > Looking for Windows? See the [Windows version](../windows/README.md).
 
@@ -26,9 +26,18 @@ You can select several files of the same type and convert them all at once.
 3. Type `bash ` (with a space after it), drag the extracted `install.sh` file into the Terminal window, and press Enter.
    Or, if the folder is in Downloads: `bash ~/Downloads/RightClickConverter-mac/install.sh`
 4. If Homebrew isn't installed, the script offers to install it (it asks for your Mac password). Then it installs the tools. The first install downloads about 1 GB (mostly LibreOffice) and can take 10-20 minutes. If your connection drops, run it again: anything already installed is skipped.
-5. In Finder, right-click (or Control-click) a file and choose **Quick Actions > Convert to...**
+5. The installer builds the ring menu with Apple's Command Line Tools (a dialog offers to install them if missing; if it does, let it finish and run `install.sh` again) and asks whether to start it at login.
+6. In Finder, right-click (or Control-click) a file and choose **Quick Actions > Convert to...**, or select files and press **Control + Option + C**. Both show the same ring.
 
 Running it with `bash install.sh` also avoids the macOS "unidentified developer" warning, which applies to double-clicked scripts.
+
+## The ring menu
+
+- **Hover** a slice to highlight it, **click** to convert. **Esc**, a right-click, or a click outside cancels.
+- The hotkey needs the small menu-bar app (the **⟳** icon in the menu bar), which the installer starts. From its menu you can convert the current Finder selection, toggle **Start at login**, or quit.
+- If you select different types of files (for example an image and a video), a message asks you to pick one type at a time.
+- The first time, macOS asks whether the app may control Finder (needed to read your selection). Click **OK**.
+- Without the Command Line Tools the right-click entry falls back to a plain list picker.
 
 ### If "Convert to..." doesn't show up
 
@@ -66,11 +75,11 @@ The converter is copied to `~/Library/Application Support/RightClickConverter`, 
 bash uninstall.sh
 ```
 
-Removes the Quick Action and the converter files. The Homebrew tools stay; the script prints the command to remove them too.
+Removes the Quick Action, the ring menu and the converter files. The Homebrew tools stay; the script prints the command to remove them too.
 
 ## Known limits
 
-- **Not yet tested on a real Mac by the author.** The scripts were checked for syntax and the conversion logic was run on another platform, but the Quick Action registration (the Finder part) can behave differently between macOS versions. If something doesn't work, please [open an issue](https://github.com/priyank1b/right-click-file-converter/issues) with your macOS version and what you see.
+- **Not yet tested on a real Mac by the author.** The scripts were checked for syntax and the conversion logic was run on another platform. The ring menu (Swift) was written without being compiled on a Mac, so the first build may need a fix, and the Quick Action registration (the Finder part) can behave differently between macOS versions. If something doesn't work, please [open an issue](https://github.com/priyank1b/right-click-file-converter/issues) with your macOS version and what you see.
 - **PDF to Word** works best on normal text PDFs. Scanned PDFs are pictures and won't become editable text (that needs OCR). Tables without borders may come out as plain text, and hyperlinks may be lost.
 - Video conversion re-encodes, so large files take time.
 - The scripts are not code-signed or notarized.
@@ -80,5 +89,5 @@ Removes the Quick Action and the converter files. The Homebrew tools stay; the s
 1. Open **Automator** > New Document > **Quick Action**.
 2. Set *Workflow receives current* **files or folders** in **Finder**.
 3. Add a **Run Shell Script** action, set *Shell* to `/bin/bash` and *Pass input* to **as arguments**.
-4. Paste: `"$HOME/Library/Application Support/RightClickConverter/convert.sh" "$@"`
+4. Paste: `"$HOME/Library/Application Support/RightClickConverter/convert.sh" "$@"` (or, if the ring menu was built, `"$HOME/Library/Application Support/RightClickConverter/RadialMenu" --pick "$@"`)
 5. Save as **Convert to...**

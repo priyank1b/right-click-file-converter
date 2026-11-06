@@ -4,7 +4,7 @@ Adds a **Convert to...** entry to the right-click menu. Pick a file, choose the 
 
 Convert images, video, audio, Word / Excel / PowerPoint, PDF, Markdown, HTML and EPUB with two clicks.
 
-**Windows also has a radial menu:** select files, press **Ctrl + Alt + C**, and pick a format from a ring that appears at your mouse pointer.
+Both versions show a **radial ring** to pick the format: right-click a file, or select files and press **Ctrl + Alt + C** (Windows) / **Control + Option + C** (Mac), and choose from a ring at your mouse pointer.
 
 ![license](https://img.shields.io/badge/license-MIT-green)
 
@@ -36,7 +36,7 @@ Under the hood it uses [FFmpeg](https://ffmpeg.org/), [ImageMagick](https://imag
 
 ```
 windows/      Windows version (PowerShell, installer, uninstaller, setup.exe source)
-mac/          macOS version (bash, Finder Quick Action, Homebrew installer)
+mac/          macOS version (bash, Swift ring menu, Finder Quick Action, Homebrew installer)
 build.ps1     builds the release files into dist/
 VERSION       current version (shared by both)
 CHANGELOG.md  release history

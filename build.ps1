@@ -97,6 +97,7 @@ $macItems = @(
     (Item 'uninstall.sh'     (Join-Path $mac 'uninstall.sh')     'lf' $true),
     (Item 'convert.sh'       (Join-Path $mac 'convert.sh')       'lf' $true),
     (Item 'pdf2docx_run.py'  (Join-Path $mac 'pdf2docx_run.py')  'lf'),
+    (Item 'radial/main.swift' (Join-Path $mac 'radial\main.swift') 'lf'),
     (Item 'README.md'        (Join-Path $mac 'README.md')        'lf'),
     (Item 'LICENSE'          (Join-Path $root 'LICENSE')         'lf')
 )

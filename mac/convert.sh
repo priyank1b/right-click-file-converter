@@ -223,13 +223,29 @@ convert_one() {
     printf '%s' "$final"
 }
 
-main() {
-    if [ "$#" -eq 0 ]; then alert "Convert to..." "No file was selected."; exit 1; fi
+MODE=""
+fail() {  # fail <title> <message>
+    if [ "$MODE" = targets ]; then printf 'err|%s\n' "$2"; else alert "$1" "$2"; fi
+    exit 1
+}
 
-    local first="$1" ext kind
+main() {
+    local preset=""
+    case "${1:-}" in
+        --targets) MODE=targets; shift ;;
+        --target)  preset="$(lower "${2:-}")"; shift 2 ;;
+    esac
+    [ "$#" -eq 0 ] && fail "Convert to..." "No file was selected."
+
+    local first="$1" ext kind f fext fk
     ext="$(lower "${first##*.}")"
     kind="$(kind_for "$ext")"
-    if [ -z "$kind" ]; then alert "Convert to..." "Sorry, .$ext files are not supported yet."; exit 1; fi
+    [ -z "$kind" ] && fail "Convert to..." "Sorry, .$ext files are not supported yet."
+    for f in "$@"; do
+        fext="$(lower "${f##*.}")"; fk="$(kind_for "$fext")"
+        [ -z "$fk" ] && fail "Convert to..." "Sorry, .$fext files are not supported yet."
+        [ "$fk" = "$kind" ] || fail "Convert to..." "You selected different types of files. Please select one type at a time (for example only images, or only videos)."
+    done
 
     local norm="$ext"
     case "$ext" in
@@ -244,27 +260,32 @@ main() {
         tools_ok "$kind" "$t" || continue
         list="$list $t"
     done
-    if [ -z "$list" ]; then
-        alert "Convert to..." "The tools needed to convert .$ext files are not installed. Run install.sh again."
-        exit 1
-    fi
+    [ -z "$list" ] && fail "Convert to..." "The tools needed to convert .$ext files are not installed. Run install.sh again."
 
-    # picker (AppleScript list); labels like "PNG", with notes for special cases
-    local labels="" label
-    for t in $list; do
-        label="$(upper "$t")"
-        case "$kind:$t" in
-            video:mp3|video:wav|video:m4a|video:flac) label="$label  (audio only)" ;;
-            video:gif) label="$label  (animated)" ;;
-            pdf:png|pdf:jpg) label="$label  (one image per page)" ;;
-            pdf:docx|pdf:odt|pdf:txt) label="$label  (approximate)" ;;
+    if [ "$MODE" = targets ]; then printf 'ok|%s|%s\n' "$kind" "${list# }"; exit 0; fi
+
+    if [ -n "$preset" ]; then
+        case " $list " in
+            *" $preset "*) t="$preset" ;;
+            *) fail "Convert to..." "Cannot convert .$ext files to $preset." ;;
         esac
-        labels="$labels|$label"
-    done
-    labels="${labels#|}"
+    else
+        # picker (AppleScript list); labels like "PNG", with notes for special cases
+        local labels="" label
+        for t in $list; do
+            label="$(upper "$t")"
+            case "$kind:$t" in
+                video:mp3|video:wav|video:m4a|video:flac) label="$label  (audio only)" ;;
+                video:gif) label="$label  (animated)" ;;
+                pdf:png|pdf:jpg) label="$label  (one image per page)" ;;
+                pdf:docx|pdf:odt|pdf:txt) label="$label  (approximate)" ;;
+            esac
+            labels="$labels|$label"
+        done
+        labels="${labels#|}"
 
-    local picker choice
-    picker='on run argv
+        local picker choice
+        picker='on run argv
     set fileName to item 1 of argv
     set AppleScript'"'"'s text item delimiters to "|"
     set theItems to text items of (item 2 of argv)
@@ -273,15 +294,15 @@ main() {
     if picked is false then return ""
     return item 1 of picked
 end run'
-    choice="$(osascript -e "$picker" "$(basename "$first")" "$labels" 2>/dev/null)"
-    [ -z "$choice" ] && exit 0
-    t="$(lower "${choice%% *}")"
+        choice="$(osascript -e "$picker" "$(basename "$first")" "$labels" 2>/dev/null)"
+        [ -z "$choice" ] && exit 0
+        t="$(lower "${choice%% *}")"
+    fi
 
-    # convert every selected file of the same kind
-    local f fext fk done_count=0 fail_count=0 last="" res
+    # convert every selected file
+    local done_count=0 fail_count=0 last="" res
     for f in "$@"; do
-        fext="$(lower "${f##*.}")"; fk="$(kind_for "$fext")"
-        [ "$fk" = "$kind" ] || continue
+        fext="$(lower "${f##*.}")"
         [ "$fext" = "$norm" ] && continue
         if res="$(convert_one "$f" "$kind" "$t")" && [ -n "$res" ]; then
             done_count=$((done_count + 1)); last="$res"
