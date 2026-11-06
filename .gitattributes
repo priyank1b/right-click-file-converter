@@ -4,3 +4,4 @@
 *.vbs text eol=crlf
 *.cs  text eol=crlf
 *.py  text eol=lf
+*.sh  text eol=lf

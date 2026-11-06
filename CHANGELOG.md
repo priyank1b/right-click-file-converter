@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-11-06
+
+### Added
+- **macOS version** in `mac/`: a Finder Quick Action ("Convert to...") with the same formats as Windows, a Homebrew-based installer (`install.sh`), `uninstall.sh`, and a release package `RightClickConverter-mac.zip`. Not yet tested on a real Mac.
+- Multi-file selection on macOS: select several files of one type and convert them together.
+
+### Changed
+- Repository reorganised: the Windows version moved to `windows/`, with a new top-level README that links both. Windows behaviour is unchanged.
+- `build.ps1` now builds the Windows and Mac packages together and checksums all three files.
+
 ## [1.0.0] - 2026-11-06
 
 ### Added
