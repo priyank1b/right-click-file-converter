@@ -132,7 +132,7 @@ Ensure 'Pandoc (Markdown, HTML, EPUB)' {
     (Test-Cmd pandoc) -or (Find-First @("$env:LOCALAPPDATA\Pandoc\pandoc.exe", "$env:ProgramFiles\Pandoc\pandoc.exe"))
 } { Install-Winget 'JohnMacFarlane.Pandoc' }
 
-Ensure 'Ghostscript (PDF to image)' {
+Ensure 'Ghostscript (PDF to image, Illustrator .ai files)' {
     (Test-Cmd gswin64c) -or (Find-First @("$env:ProgramFiles\gs\gs*\bin\gswin64c.exe"))
 } { Install-GhostscriptDirect }
 
@@ -151,7 +151,7 @@ if (-not $DryRun) {
     # stop a running radial menu so its file can be replaced (upgrade)
     Get-Process -Name RadialMenu -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 400
-    foreach ($f in 'Convert.ps1', 'Launch.vbs', 'pdf2docx_run.py', 'RadialMenu.exe') {
+    foreach ($f in 'Convert.ps1', 'Launch.vbs', 'pdf2docx_run.py', 'ai_svg_run.py', 'ai2cdr.ps1', 'RadialMenu.exe') {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $f) -Destination $dest -Force
     }
 

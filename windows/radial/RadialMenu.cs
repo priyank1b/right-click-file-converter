@@ -48,6 +48,7 @@ namespace RadialConvert
             if (ext == "html" || ext == "htm") return "html";
             if (ext == "epub") return "epub";
             if (ext == "pdf") return "pdf";
+            if (ext == "ai") return "ai";
             return null;
         }
 
@@ -65,6 +66,7 @@ namespace RadialConvert
                 case "html": return new[] { "docx", "md", "txt", "epub", "pdf" };
                 case "epub": return new[] { "docx", "html", "md", "txt" };
                 case "pdf": return new[] { "png", "jpg", "docx", "odt", "txt" };
+                case "ai": return new[] { "cdr", "svg", "pdf", "eps", "png", "jpg" };
             }
             return new string[0];
         }
@@ -80,6 +82,10 @@ namespace RadialConvert
                 case "html": return target == "pdf" ? new[] { "soffice" } : new[] { "pandoc" };
                 case "epub": return new[] { "pandoc" };
                 case "pdf": return (target == "png" || target == "jpg") ? new[] { "magick" } : new[] { "soffice" };
+                case "ai":
+                    if (target == "cdr") return new[] { "corel" };
+                    if (target == "svg") return new[] { "gs", "svgpy" };
+                    return new[] { "gs" };
             }
             return new string[0];
         }
@@ -130,6 +136,7 @@ namespace RadialConvert
                 case "html": return "HTML files";
                 case "epub": return "EPUB files";
                 case "pdf": return "PDFs";
+                case "ai": return "Illustrator files";
             }
             return "unsupported files";
         }
@@ -140,6 +147,8 @@ namespace RadialConvert
             if (kind == "video" && target == "gif") return "animated";
             if (kind == "pdf" && (target == "png" || target == "jpg")) return "per page";
             if (kind == "pdf" && (target == "docx" || target == "odt" || target == "txt")) return "approx.";
+            if (kind == "ai" && target == "cdr") return "CorelDRAW";
+            if (kind == "ai" && target != "pdf") return "per artboard";
             return "";
         }
     }
@@ -191,8 +200,30 @@ namespace RadialConvert
             if (DateTime.UtcNow - stamp > TimeSpan.FromSeconds(60)) { cache.Clear(); stamp = DateTime.UtcNow; }
             bool v;
             if (cache.TryGetValue(tool, out v)) return v;
-            string[] names = tool == "soffice" ? new[] { "soffice.com", "soffice.exe" } : new[] { tool + ".exe" };
             v = false;
+            string appDir = Path.GetDirectoryName(typeof(Tools).Assembly.Location);
+            if (tool == "corel")
+            {
+                // only CorelDRAW itself can write .cdr; it registers this automation class
+                try { using (var k = Microsoft.Win32.Registry.ClassesRoot.OpenSubKey(@"CorelDRAW.Application\CLSID")) v = k != null; } catch { }
+                v = v && File.Exists(Path.Combine(appDir, "ai2cdr.ps1"));
+                cache[tool] = v;
+                return v;
+            }
+            if (tool == "svgpy")
+            {
+                v = File.Exists(Path.Combine(appDir, @"pyenv\Scripts\python.exe")) && File.Exists(Path.Combine(appDir, "ai_svg_run.py"));
+                cache[tool] = v;
+                return v;
+            }
+            if (tool == "gs")
+            {
+                string pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+                foreach (string d in Glob(Path.Combine(pf, "gs"), "gs*", "bin"))
+                    if (File.Exists(Path.Combine(d, "gswin64c.exe"))) { v = true; break; }
+                if (v) { cache[tool] = v; return v; }
+            }
+            string[] names = tool == "soffice" ? new[] { "soffice.com", "soffice.exe" } : tool == "gs" ? new[] { "gswin64c.exe" } : new[] { tool + ".exe" };
             foreach (string d in Dirs())
             {
                 foreach (string n in names)

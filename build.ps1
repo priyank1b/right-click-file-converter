@@ -68,6 +68,8 @@ $winItems = @(
     (Item 'Convert.ps1'      (Join-Path $win 'Convert.ps1')      'crlf'),
     (Item 'Launch.vbs'       (Join-Path $win 'Launch.vbs')       'crlf'),
     (Item 'pdf2docx_run.py'  (Join-Path $win 'pdf2docx_run.py')  'lf'),
+    (Item 'ai_svg_run.py'    (Join-Path $win 'ai_svg_run.py')    'lf'),
+    (Item 'ai2cdr.ps1'       (Join-Path $win 'ai2cdr.ps1')       'crlf'),
     (Item 'Uninstall.bat'    (Join-Path $win 'Uninstall.bat')    'crlf'),
     (Item 'Uninstall.ps1'    (Join-Path $win 'Uninstall.ps1')    'crlf'),
     (Item 'README.md'        (Join-Path $win 'README.md')        'crlf'),

@@ -18,6 +18,7 @@ Adds a **Convert to...** entry to the Windows right-click menu. Pick a file, cho
 | Presentations | PPT, PPTX, ODP | PDF, PPTX, ODP |
 | PDF | PDF | DOCX, ODT, TXT, or one PNG/JPG per page |
 | Markdown / HTML / EPUB | MD, HTML, EPUB | DOCX, HTML, MD, TXT, EPUB, PDF |
+| Illustrator | AI | SVG, PDF, EPS, PNG, JPG (one per artboard), and CDR when CorelDRAW is installed |
 
 ## Install
 
@@ -56,7 +57,7 @@ The installer uses [winget](https://learn.microsoft.com/windows/package-manager/
 |------|----------|
 | [FFmpeg](https://ffmpeg.org/) | video and audio |
 | [ImageMagick](https://imagemagick.org/) | images |
-| [Ghostscript](https://ghostscript.com/) | PDF to image |
+| [Ghostscript](https://ghostscript.com/) | PDF to image, Illustrator (.ai) files |
 | [Pandoc](https://pandoc.org/) | Markdown, HTML, EPUB |
 | [LibreOffice](https://www.libreoffice.org/) | Word, Excel, PowerPoint, CSV, PDF |
 | [Python](https://www.python.org/) + [pdf2docx](https://github.com/ArtifexSoftware/pdf2docx) | better PDF to Word |
@@ -70,6 +71,8 @@ Run `Uninstall.bat`. It removes the right-click entry and the converter files. T
 ## Known limits
 
 - **PDF to Word** works best on normal text PDFs. Scanned PDFs are pictures and won't become editable text (that needs OCR). Tables without borders may come out as plain text, hyperlinks may be lost, and complex multi-column layouts may not match exactly.
+- **AI to CDR** only appears when CorelDRAW Graphics Suite (full Windows version, with automation) is installed, because only CorelDRAW can write .cdr files. The converter opens CorelDRAW in the background, so it takes a few seconds per file. Home & Student / Essentials editions and CorelDRAW.app may not work.
+- **AI files** must be saved with "Create PDF Compatible File" on (Illustrator's default). Very old (Illustrator 8 and earlier) or non-PDF-compatible files may not convert to SVG.
 - Video conversion re-encodes, so large files take time.
 - The installer and exe are unsigned.
 
@@ -80,6 +83,8 @@ Install.bat / Install.ps1     installer (elevates, installs tools, adds the menu
 Convert.ps1                   the converter UI and logic
 Launch.vbs                    starts Convert.ps1 without a console window
 pdf2docx_run.py               PDF to DOCX helper
+ai_svg_run.py                 AI to SVG helper (PyMuPDF)
+ai2cdr.ps1                    AI to CDR helper (drives CorelDRAW)
 Uninstall.bat / Uninstall.ps1 removes the menu entry and files
 radial/RadialMenu.cs          the hotkey radial menu (tray app, compiled to RadialMenu.exe)
 installer/Setup.cs            source of the self-extracting RightClickConverter-Setup.exe

@@ -35,6 +35,16 @@ $tools.pdfpy = $null
 $pyExe = Join-Path $env:LOCALAPPDATA 'RightClickConverter\pyenv\Scripts\python.exe'
 $pyRun = Join-Path $PSScriptRoot 'pdf2docx_run.py'
 if ((Test-Path -LiteralPath $pyExe) -and (Test-Path -LiteralPath $pyRun)) { $tools.pdfpy = $pyExe }
+# Ghostscript reads Illustrator (.ai) files
+$tools.gs = Find-Tool 'gswin64c.exe' @("$env:ProgramFiles\gs\gs*\bin\gswin64c.exe", "${env:ProgramFiles(x86)}\gs\gs*\bin\gswin32c.exe")
+# AI -> SVG uses PyMuPDF from the same Python environment
+$tools.svgpy = $null
+$svgRun = Join-Path $PSScriptRoot 'ai_svg_run.py'
+if ((Test-Path -LiteralPath $pyExe) -and (Test-Path -LiteralPath $svgRun)) { $tools.svgpy = $pyExe }
+# AI -> CDR needs CorelDRAW itself (only it can write .cdr files)
+$tools.corel = $null
+$cdrRun = Join-Path $PSScriptRoot 'ai2cdr.ps1'
+if ((Test-Path -LiteralPath 'Registry::HKEY_CLASSES_ROOT\CorelDRAW.Application\CLSID') -and (Test-Path -LiteralPath $cdrRun)) { $tools.corel = 'corel' }
 
 function Get-Route([string]$ext) {
     switch -Regex ($ext) {
@@ -48,6 +58,7 @@ function Get-Route([string]$ext) {
         '^(html|htm)$' { return @{ Kind = 'html'; Targets = @('docx', 'md', 'txt', 'epub', 'pdf') } }
         '^epub$' { return @{ Kind = 'epub'; Targets = @('docx', 'html', 'md', 'txt') } }
         '^pdf$' { return @{ Kind = 'pdf'; Targets = @('png', 'jpg', 'docx', 'odt', 'txt') } }
+        '^ai$' { return @{ Kind = 'ai'; Targets = @('cdr', 'svg', 'pdf', 'eps', 'png', 'jpg') } }
     }
     return $null
 }
@@ -65,6 +76,11 @@ function Get-Needs([string]$kind, [string]$target) {
         'html' { if ($target -eq 'pdf') { return @('soffice') } else { return @('pandoc') } }
         'epub' { return @('pandoc') }
         'pdf' { if ($target -in 'png', 'jpg') { return @('magick') } else { return @('soffice') } }
+        'ai' {
+            if ($target -eq 'cdr') { return @('corel') }
+            if ($target -eq 'svg') { return @('gs', 'svgpy') }
+            return @('gs')
+        }
     }
 }
 
@@ -83,14 +99,21 @@ function Get-FreeName([string]$dir, [string]$base, [string]$ext) {
     return $p
 }
 
-function Invoke-Tool([string]$exe, [string]$argLine) {
+function Invoke-Tool([string]$exe, [string]$argLine, [int]$timeoutSec = 0) {
     $errFile = [IO.Path]::GetTempFileName()
     $outFile = [IO.Path]::GetTempFileName()
     $p = Start-Process -FilePath $exe -ArgumentList $argLine -WindowStyle Hidden -PassThru -RedirectStandardError $errFile -RedirectStandardOutput $outFile
     $null = $p.Handle
+    $deadline = $null
+    if ($timeoutSec -gt 0) { $deadline = (Get-Date).AddSeconds($timeoutSec) }
     while (-not $p.HasExited) {
         [System.Windows.Forms.Application]::DoEvents()
         Start-Sleep -Milliseconds 100
+        if ($deadline -and (Get-Date) -gt $deadline) {
+            try { $p.Kill() } catch {}
+            Remove-Item -LiteralPath $errFile, $outFile -Force -ErrorAction SilentlyContinue
+            return @{ Code = -1; Err = "Timed out after $timeoutSec seconds." }
+        }
     }
     $p.WaitForExit()
     $err = ''
@@ -113,6 +136,26 @@ function Wait-Output([string]$dir, [int]$timeoutSec) {
         Start-Sleep -Milliseconds 300
     }
     return $null
+}
+
+# Move one or more page files next to the source: one file as-is, several into a "<name> pages" folder
+function Save-Pages([object[]]$made, [string]$dir, [string]$base, [string]$t) {
+    if ($made.Count -eq 1) {
+        $dest = Get-FreeName $dir $base $t
+        Move-Item -LiteralPath $made[0].FullName -Destination $dest
+        return $dest
+    }
+    $label = $base + ' ' + $t.ToUpper() + ' files'
+    $folder = Join-Path $dir $label
+    $n = 1
+    while (Test-Path -LiteralPath $folder) { $folder = Join-Path $dir ($label + ' (' + $n + ')'); $n++ }
+    New-Item -ItemType Directory -Path $folder | Out-Null
+    $i = 1
+    foreach ($m in $made) {
+        Move-Item -LiteralPath $m.FullName -Destination (Join-Path $folder ($base + ' - artboard ' + $i + '.' + $t))
+        $i++
+    }
+    return $folder
 }
 
 function Convert-LO([string]$inFile, [string]$fmt, [string]$work, [string]$infilter) {
@@ -181,6 +224,8 @@ try {
         if ($kind -eq 'video' -and $t -eq 'gif') { $label += '  (animated)' }
         if ($kind -eq 'pdf' -and $t -in 'png', 'jpg') { $label += '  (one image per page)' }
         if ($kind -eq 'pdf' -and $t -in 'docx', 'odt', 'txt') { $label += '  (approximate)' }
+        if ($kind -eq 'ai' -and $t -eq 'cdr') { $label += '  (CorelDRAW)' }
+        if ($kind -eq 'ai' -and $t -in 'svg', 'eps', 'png', 'jpg') { $label += '  (one per artboard)' }
         [void]$lb.Items.Add($label)
     }
     $lb.SelectedIndex = 0
@@ -347,6 +392,37 @@ try {
                     $res = Convert-LO $src $fmt $work 'writer_pdf_import'
                     $final = Get-FreeName $dir $base $t
                     Move-Item -LiteralPath $res -Destination $final
+                }
+            }
+            'ai' {
+                if ($t -eq 'cdr') {
+                    $out = Join-Path $work 'out.cdr'
+                    $r = Invoke-Tool 'powershell.exe' ('-NoProfile -ExecutionPolicy Bypass -File ' + (Q $cdrRun) + ' ' + (Q $src) + ' ' + (Q $out)) 300
+                    if (-not (Test-Path -LiteralPath $out) -or (Get-Item -LiteralPath $out).Length -eq 0) { throw ('CorelDRAW could not convert the file. ' + $r.Err) }
+                    $final = Get-FreeName $dir $base 'cdr'
+                    Move-Item -LiteralPath $out -Destination $final
+                } else {
+                    $pages = Join-Path $work 'pages'
+                    New-Item -ItemType Directory -Path $pages -Force | Out-Null
+                    $gsOpts = '-dSAFER -q -dNOPAUSE -dBATCH'
+                    switch ($t) {
+                        'pdf' { $dev = '-sDEVICE=pdfwrite'; $pat = 'p.pdf' }
+                        'svg' { $dev = '-sDEVICE=pdfwrite'; $pat = 'clean.pdf' }
+                        'eps' { $dev = '-sDEVICE=eps2write'; $pat = 'p%03d.eps' }
+                        'png' { $dev = '-sDEVICE=pngalpha -r300 -dTextAlphaBits=4 -dGraphicsAlphaBits=4'; $pat = 'p%03d.png' }
+                        'jpg' { $dev = '-sDEVICE=jpeg -dJPEGQ=92 -r300 -dTextAlphaBits=4 -dGraphicsAlphaBits=4'; $pat = 'p%03d.jpg' }
+                    }
+                    $gsDir = $pages
+                    if ($t -eq 'svg') { $gsDir = $work }
+                    $r = Invoke-Tool $tools.gs ($gsOpts + ' ' + $dev + ' -sOutputFile=' + (Q (Join-Path $gsDir $pat)) + ' ' + (Q $src)) 300
+                    if ($t -eq 'svg') {
+                        $clean = Join-Path $work 'clean.pdf'
+                        if (-not (Test-Path -LiteralPath $clean)) { throw ('Ghostscript could not read the .ai file (it may be an old, non-PDF-compatible file). ' + $r.Err) }
+                        $r = Invoke-Tool $tools.svgpy ('-I ' + (Q $svgRun) + ' ' + (Q $clean) + ' ' + (Q $pages)) 300
+                    }
+                    $made = @(Get-ChildItem -LiteralPath $pages -File | Where-Object { $_.Length -gt 0 } | Sort-Object Name)
+                    if ($made.Count -eq 0) { throw ('Could not read the .ai file (it may be an old, non-PDF-compatible file). ' + $r.Err) }
+                    $final = Save-Pages $made $dir $base $t
                 }
             }
         }

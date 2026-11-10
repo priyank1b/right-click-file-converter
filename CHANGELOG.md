@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-11-10
+
+### Added
+- **Windows: Adobe Illustrator (.ai) files** convert to SVG, PDF, EPS, PNG and JPG using Ghostscript (and PyMuPDF for SVG). Files with several artboards give one file per artboard, in a "<name> <FORMAT> files" folder.
+- **Windows: AI to CDR** when CorelDRAW is installed. `ai2cdr.ps1` opens the file in CorelDRAW in the background and saves it as .cdr; the CDR option only appears on PCs where CorelDRAW is registered.
+- `Convert.ps1` tool calls can time out (used for the Ghostscript and CorelDRAW steps) so a stuck program doesn't leave the progress window open forever.
+
+### Changed
+- The macOS build is unchanged from 1.3.0.
+
 ## [1.3.0] - 2026-11-06
 
 ### Added
