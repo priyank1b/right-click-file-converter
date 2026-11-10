@@ -49,7 +49,7 @@ if ((Test-Path -LiteralPath 'Registry::HKEY_CLASSES_ROOT\CorelDRAW.Application\C
 
 function Get-Route([string]$ext) {
     switch -Regex ($ext) {
-        '^(jpg|jpeg|jfif|png|webp|bmp|gif|tif|tiff|heic|heif|avif|ico)$' { return @{ Kind = 'image'; Targets = @('png', 'jpg', 'webp', 'bmp', 'gif', 'tiff', 'ico', 'pdf') } }
+        '^(jpg|jpeg|jfif|png|webp|bmp|gif|tif|tiff|heic|heif|avif|ico)$' { return @{ Kind = 'image'; Targets = @('png', 'jpg', 'webp', 'bmp', 'gif', 'tiff', 'ico', 'pdf', 'resize') } }
         '^(mp4|mkv|avi|mov|wmv|flv|webm|m4v|mpg|mpeg|3gp|ts|mts|m2ts|vob)$' { return @{ Kind = 'video'; Targets = @('mp4', 'mkv', 'avi', 'mov', 'webm', 'gif', 'mp3', 'wav', 'm4a', 'flac') } }
         '^(mp3|wav|flac|aac|m4a|ogg|opus|wma|aiff|aif)$' { return @{ Kind = 'audio'; Targets = @('mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'opus') } }
         '^(doc|docx|odt|rtf|txt|wpd)$' { return @{ Kind = 'doc'; Targets = @('pdf', 'docx', 'odt', 'rtf', 'txt', 'html') } }
@@ -173,6 +173,182 @@ function Convert-LO([string]$inFile, [string]$fmt, [string]$work, [string]$infil
     return $res
 }
 
+# ---------------------------------------------------------------- resize (images)
+function Format-Bytes([int64]$n) {
+    if ($n -ge 1MB) { return ('{0:N1} MB' -f ($n / 1MB)) }
+    return ('{0:N0} KB' -f [math]::Ceiling($n / 1KB))
+}
+
+# Asks how to resize. Returns $null on cancel, otherwise
+#   @{ Mode = keep|px|pct; W; H; Prop; Pct; SizeBytes (0 = no limit); Fmt = keep|jpg|png|webp }
+function Show-ResizeDialog([int]$count, [string]$name) {
+    function C([string]$type, [string]$n, [string]$text, [int]$x, [int]$y, [int]$w, [int]$h) {
+        $c = New-Object ('System.Windows.Forms.' + $type)
+        $c.Name = $n
+        $c.Text = $text
+        $c.Location = New-Object System.Drawing.Point($x, $y)
+        $c.Size = New-Object System.Drawing.Size($w, $h)
+        return $c
+    }
+    $f = New-Object System.Windows.Forms.Form
+    $f.Name = 'rzForm'
+    $f.Text = 'Resize'
+    $f.ClientSize = New-Object System.Drawing.Size(380, 432)
+    $f.StartPosition = 'CenterScreen'
+    $f.FormBorderStyle = 'FixedDialog'
+    $f.MaximizeBox = $false
+    $f.MinimizeBox = $false
+    $f.TopMost = $true
+
+    $what = $name
+    if ($count -gt 1) { $what = "$count images" }
+    $lbl = C 'Label' 'lbl' ("Resize  " + $what) 12 12 356 36
+
+    $g1 = C 'GroupBox' 'g1' 'Size in pixels' 12 52 356 156
+    $rbKeep = C 'RadioButton' 'rbKeep' 'Keep original size' 14 24 200 22
+    $rbKeep.Checked = $true
+    $rbPx = C 'RadioButton' 'rbPx' 'Width x Height' 14 52 120 22
+    $txtW = C 'TextBox' 'txtW' '' 140 50 62 24
+    $lx = C 'Label' 'lblx' 'x' 208 54 14 20
+    $txtH = C 'TextBox' 'txtH' '' 226 50 62 24
+    $lpx = C 'Label' 'lblpx' 'px' 294 54 24 20
+    $cbProp = C 'CheckBox' 'cbProp' 'Keep proportions (an empty box is worked out)' 32 80 316 22
+    $cbProp.Checked = $true
+    $rbPct = C 'RadioButton' 'rbPct' 'Percent of original' 14 112 124 22
+    $txtPct = C 'TextBox' 'txtPct' '50' 140 110 62 24
+    $lpc = C 'Label' 'lblpc' '%' 208 114 14 20
+    $g1.Controls.AddRange(@($rbKeep, $rbPx, $txtW, $lx, $txtH, $lpx, $cbProp, $rbPct, $txtPct, $lpc))
+
+    $g2 = C 'GroupBox' 'g2' 'File size' 12 216 356 82
+    $cbSize = C 'CheckBox' 'cbSize' 'Make file smaller than' 14 24 150 22
+    $txtSize = C 'TextBox' 'txtSize' '200' 170 22 62 24
+    $cmbUnit = C 'ComboBox' 'cmbUnit' '' 238 22 62 24
+    $cmbUnit.DropDownStyle = 'DropDownList'
+    [void]$cmbUnit.Items.AddRange(@('KB', 'MB'))
+    $cmbUnit.SelectedIndex = 0
+    $hint = C 'Label' 'hint' 'Works with JPG and WebP. Other formats switch to JPG.' 14 52 334 20
+    $hint.ForeColor = [System.Drawing.Color]::Gray
+    $g2.Controls.AddRange(@($cbSize, $txtSize, $cmbUnit, $hint))
+
+    $g3 = C 'GroupBox' 'g3' 'Save as' 12 306 356 58
+    $cmbFmt = C 'ComboBox' 'cmbFmt' '' 14 24 220 24
+    $cmbFmt.DropDownStyle = 'DropDownList'
+    [void]$cmbFmt.Items.AddRange(@('Same format as original', 'JPG', 'PNG', 'WEBP'))
+    $cmbFmt.SelectedIndex = 0
+    $g3.Controls.Add($cmbFmt)
+
+    $ok = C 'Button' 'btnOk' 'Resize' 196 384 80 28
+    $cancel = C 'Button' 'btnCancel' 'Cancel' 288 384 80 28
+    $cancel.DialogResult = 'Cancel'
+    $f.AcceptButton = $ok
+    $f.CancelButton = $cancel
+    $f.Controls.AddRange(@($lbl, $g1, $g2, $g3, $ok, $cancel))
+
+    $update = {
+        $txtW.Enabled = $rbPx.Checked
+        $txtH.Enabled = $rbPx.Checked
+        $cbProp.Enabled = $rbPx.Checked
+        $txtPct.Enabled = $rbPct.Checked
+        $txtSize.Enabled = $cbSize.Checked
+        $cmbUnit.Enabled = $cbSize.Checked
+    }.GetNewClosure()
+    $rbKeep.Add_CheckedChanged($update)
+    $rbPx.Add_CheckedChanged($update)
+    $rbPct.Add_CheckedChanged($update)
+    $cbSize.Add_CheckedChanged($update)
+    & $update
+
+    # a hashtable is shared by reference with the click handler's closure ($script: variables are not)
+    $state = @{ Result = $null }
+    $ok.Add_Click({
+        $inv = [Globalization.CultureInfo]::InvariantCulture
+        $r = @{ Mode = 'keep'; W = 0; H = 0; Prop = $true; Pct = 100.0; SizeBytes = [int64]0; Fmt = 'keep' }
+        if ($rbPx.Checked) {
+            $w = 0; $h = 0
+            $wt = $txtW.Text.Trim(); $ht = $txtH.Text.Trim()
+            if ($wt -eq '' -and $ht -eq '') { [void][System.Windows.Forms.MessageBox]::Show('Enter a width, a height, or both.', 'Resize'); return }
+            if ($wt -ne '' -and -not ([int]::TryParse($wt, [ref]$w) -and $w -ge 1 -and $w -le 30000)) { [void][System.Windows.Forms.MessageBox]::Show('The width must be a whole number of pixels.', 'Resize'); return }
+            if ($ht -ne '' -and -not ([int]::TryParse($ht, [ref]$h) -and $h -ge 1 -and $h -le 30000)) { [void][System.Windows.Forms.MessageBox]::Show('The height must be a whole number of pixels.', 'Resize'); return }
+            if (-not $cbProp.Checked -and ($w -lt 1 -or $h -lt 1)) { [void][System.Windows.Forms.MessageBox]::Show('For an exact size, fill in both width and height (or turn on Keep proportions).', 'Resize'); return }
+            $r.Mode = 'px'; $r.W = $w; $r.H = $h; $r.Prop = $cbProp.Checked
+        } elseif ($rbPct.Checked) {
+            $p = 0.0
+            if (-not ([double]::TryParse($txtPct.Text.Trim().Replace(',', '.'), [Globalization.NumberStyles]::Float, $inv, [ref]$p) -and $p -gt 0 -and $p -le 1000)) { [void][System.Windows.Forms.MessageBox]::Show('Enter a percent between 1 and 1000.', 'Resize'); return }
+            $r.Mode = 'pct'; $r.Pct = $p
+        }
+        if ($cbSize.Checked) {
+            $s = 0.0
+            if (-not ([double]::TryParse($txtSize.Text.Trim().Replace(',', '.'), [Globalization.NumberStyles]::Float, $inv, [ref]$s) -and $s -gt 0)) { [void][System.Windows.Forms.MessageBox]::Show('Enter the file size limit as a number.', 'Resize'); return }
+            $mult = 1024
+            if ($cmbUnit.SelectedItem -eq 'MB') { $mult = 1048576 }
+            $bytes = [int64]($s * $mult)
+            if ($bytes -lt 1024) { [void][System.Windows.Forms.MessageBox]::Show('The file size limit must be at least 1 KB.', 'Resize'); return }
+            $r.SizeBytes = $bytes
+        }
+        if ($r.Mode -eq 'keep' -and $r.SizeBytes -eq 0 -and $cmbFmt.SelectedIndex -eq 0) {
+            [void][System.Windows.Forms.MessageBox]::Show('Choose a new size, a file size limit, or a different format.', 'Resize'); return
+        }
+        $r.Fmt = @('keep', 'jpg', 'png', 'webp')[$cmbFmt.SelectedIndex]
+        $state.Result = $r
+        $f.DialogResult = 'OK'
+    }.GetNewClosure())
+
+    $answer = $f.ShowDialog()
+    $res = $state.Result
+    $f.Dispose()
+    if ($answer -ne 'OK') { return $null }
+    return $res
+}
+
+# Resizes one image (and tries to fit a file size limit for JPG / WebP). Returns @{ Bytes; Reached }
+function Invoke-Resize([string]$src, [string]$out, [string]$fmt, $o) {
+    $inv = [Globalization.CultureInfo]::InvariantCulture
+    $srcExt = [IO.Path]::GetExtension($src).TrimStart('.').ToLower()
+    $anim = ($fmt -eq 'gif' -and $srcExt -eq 'gif')
+    $frame = $src + '[0]'
+    if ($anim) { $frame = $src }
+    $first = ' -auto-orient'
+    if ($anim) { $first += ' -coalesce' }
+    if ($o.Mode -eq 'px') {
+        $w = ''; if ($o.W -gt 0) { $w = [string]$o.W }
+        $h = ''; if ($o.H -gt 0) { $h = [string]$o.H }
+        $flag = ''; if (-not $o.Prop) { $flag = '!' }
+        $first += ' -resize ' + $w + 'x' + $h + $flag
+    } elseif ($o.Mode -eq 'pct') {
+        $first += ' -resize ' + ([double]$o.Pct).ToString('0.##', $inv) + '%'
+    }
+    $fmtOpts = ''
+    if ($fmt -in 'jpg', 'bmp') { $fmtOpts += ' -background white -alpha remove -alpha off' }
+    $target = [int64]$o.SizeBytes
+    $scale = 100.0
+    $tries = 1
+    if ($target -gt 0) { $tries = 14 }
+    $size = [int64]0
+    for ($i = 0; $i -lt $tries; $i++) {
+        $line = (Q $frame) + $first
+        if ($i -gt 0) { $line += ' -resize ' + $scale.ToString('0.#', $inv) + '%' }
+        $line += $fmtOpts
+        if ($target -gt 0) { $line += ' -strip' }
+        if ($fmt -eq 'jpg') {
+            $line += ' -quality 92'
+            if ($target -gt 0) { $line += ' -define jpeg:extent=' + [math]::Max(1, [int][math]::Floor($target / 1KB)) + 'KB' }
+        } elseif ($fmt -eq 'webp') {
+            $line += ' -quality 90'
+            if ($target -gt 0) { $line += ' -define webp:target-size=' + $target }
+        }
+        if (Test-Path -LiteralPath $out) { Remove-Item -LiteralPath $out -Force }
+        $r = Invoke-Tool $tools.magick ($line + ' ' + (Q $out)) 180
+        if (-not (Test-Path -LiteralPath $out) -or (Get-Item -LiteralPath $out).Length -eq 0) { throw ('ImageMagick failed. ' + $r.Err) }
+        $size = (Get-Item -LiteralPath $out).Length
+        if ($target -le 0 -or $size -le $target) { return @{ Bytes = $size; Reached = $true } }
+        # still too big: shrink the pixels a bit more and try again
+        $ratio = [math]::Sqrt($target / $size) * 0.97
+        $scale = $scale * [math]::Max(0.5, [math]::Min(0.92, $ratio))
+        if ($scale -lt 3) { break }
+    }
+    return @{ Bytes = $size; Reached = $false }
+}
+
 # ---------------------------------------------------------------- main
 try {
     if (-not $Paths -or -not (Test-Path -LiteralPath $Paths[0])) { Show-Error 'File not found.'; exit 1 }
@@ -226,6 +402,7 @@ try {
         if ($kind -eq 'pdf' -and $t -in 'png', 'jpg') { $label += '  (one image per page)' }
         if ($kind -eq 'pdf' -and $t -in 'docx', 'odt', 'txt') { $label += '  (approximate)' }
         if ($kind -eq 'ai' -and $t -eq 'cdr') { $label += '  (CorelDRAW)' }
+        if ($kind -eq 'image' -and $t -eq 'resize') { $label += '  (pixels or file size)' }
         if ($kind -eq 'ai' -and $t -in 'svg', 'eps', 'png', 'jpg') { $label += '  (one per artboard)' }
         [void]$lb.Items.Add($label)
     }
@@ -248,6 +425,14 @@ try {
     $t = ($lb.SelectedItem -split ' ')[0].ToLower()
     }
 
+    # ---- resize options (asked once for the whole selection)
+    $rz = $null
+    $summary = $null
+    if ($kind -eq 'image' -and $t -eq 'resize') {
+        $rz = Show-ResizeDialog $Paths.Count $fileName
+        if (-not $rz) { exit 0 }
+    }
+
     # ---- progress window
     $pf = New-Object System.Windows.Forms.Form
     $pf.Text = 'Converting...'
@@ -257,6 +442,7 @@ try {
     $pf.TopMost = $true
     $pl = New-Object System.Windows.Forms.Label
     $pl.Text = "Converting $fileName to $($t.ToUpper())..."
+    if ($rz) { $pl.Text = 'Resizing ' + $fileName + '...'; if ($Paths.Count -gt 1) { $pl.Text = 'Resizing ' + $Paths.Count + ' images...' } }
     $pl.Location = New-Object System.Drawing.Point(12, 10)
     $pl.Size = New-Object System.Drawing.Size(356, 22)
     $pb = New-Object System.Windows.Forms.ProgressBar
@@ -275,6 +461,38 @@ try {
     try {
         switch ($kind) {
             'image' {
+              if ($rz) {
+                $made = @()
+                $notes = @()
+                $lastBytes = 0
+                foreach ($p in $Paths) {
+                    if (-not (Test-Path -LiteralPath $p)) { continue }
+                    $sp = (Resolve-Path -LiteralPath $p).Path
+                    $d2 = Split-Path $sp -Parent
+                    $b2 = [IO.Path]::GetFileNameWithoutExtension($sp)
+                    $e2 = [IO.Path]::GetExtension($sp).TrimStart('.').ToLower()
+                    if ($e2 -in 'jpeg', 'jfif') { $e2 = 'jpg' } elseif ($e2 -eq 'tif') { $e2 = 'tiff' }
+                    $fmtSel = $rz.Fmt
+                    if ($fmtSel -eq 'keep') {
+                        $fmtSel = $e2
+                        if ($fmtSel -notin 'jpg', 'png', 'webp', 'bmp', 'gif', 'tiff') { $fmtSel = 'jpg' }
+                    }
+                    # a file size limit only works for formats that can trade quality for size
+                    if ($rz.SizeBytes -gt 0 -and $fmtSel -notin 'jpg', 'webp') { $fmtSel = 'jpg' }
+                    $out = Join-Path $work ('r' + $made.Count + '.' + $fmtSel)
+                    $res = Invoke-Resize $sp $out $fmtSel $rz
+                    $dest = Get-FreeName $d2 ($b2 + ' (resized)') $fmtSel
+                    Move-Item -LiteralPath $out -Destination $dest
+                    $made += $dest
+                    $lastBytes = $res.Bytes
+                    if (-not $res.Reached) { $notes += ((Split-Path $dest -Leaf) + ' is ' + (Format-Bytes $res.Bytes)) }
+                }
+                if ($made.Count -eq 0) { throw 'No files found to resize.' }
+                $final = $made[$made.Count - 1]
+                if ($made.Count -eq 1) { $summary = 'Saved as ' + (Split-Path $final -Leaf) + ' (' + (Format-Bytes $lastBytes) + ')' }
+                else { $summary = ([string]$made.Count) + ' images resized' }
+                if ($notes.Count -gt 0) { $summary += '. Could not get under ' + (Format-Bytes $rz.SizeBytes) + ': ' + ($notes -join ', ') }
+              } else {
                 $out = Join-Path $work ('out.' + $t)
                 $frame = $src
                 if ($t -notin 'gif', 'pdf', 'tiff') { $frame = $src + '[0]' }
@@ -287,6 +505,7 @@ try {
                 if (-not (Test-Path -LiteralPath $out)) { throw ('ImageMagick failed. ' + $r.Err) }
                 $final = Get-FreeName $dir $base $t
                 Move-Item -LiteralPath $out -Destination $final
+              }
             }
             { $_ -in 'video', 'audio' } {
                 $out = Join-Path $work ('out.' + $t)
@@ -437,7 +656,9 @@ try {
     $ni = New-Object System.Windows.Forms.NotifyIcon
     $ni.Icon = [System.Drawing.SystemIcons]::Information
     $ni.Visible = $true
-    $ni.ShowBalloonTip(4000, 'Converted', ('Saved as ' + (Split-Path $final -Leaf)), 'Info')
+    $doneText = 'Saved as ' + (Split-Path $final -Leaf)
+    if ($summary) { $doneText = $summary }
+    $ni.ShowBalloonTip(5000, 'Converted', $doneText, 'Info')
     $end = (Get-Date).AddSeconds(4)
     while ((Get-Date) -lt $end) { [System.Windows.Forms.Application]::DoEvents(); Start-Sleep -Milliseconds 100 }
     $ni.Dispose()

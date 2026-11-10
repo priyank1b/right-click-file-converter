@@ -20,6 +20,16 @@ Adds a **Convert to...** entry to the Windows right-click menu. Pick a file, cho
 | Markdown / HTML / EPUB | MD, HTML, EPUB | DOCX, HTML, MD, TXT, EPUB, PDF |
 | Illustrator | AI | SVG, PDF, EPS, PNG, JPG (one per artboard), and CDR when CorelDRAW is installed |
 
+### Resize images
+
+Choose **RESIZE** in the ring (or list) for any image to change its size without changing what it is:
+
+- **Pixels**: set a width, a height or both. With *Keep proportions* on, the picture is fitted inside the box and an empty box is worked out for you (width 800 gives 800 px wide). Turn it off for an exact width x height. Or use **Percent of original**.
+- **File size**: tick *Make file smaller than* and enter KB or MB (handy for upload forms with a limit). This works with JPG and WebP; PNG and other formats switch to JPG. Very small limits make the picture softer, and if the limit can't be reached you are told the smallest size it got to.
+- **Save as**: keep the format, or pick JPG, PNG or WebP.
+
+You can combine them (for example 1000 px wide and under 100 KB). Results are saved next to the original as `name (resized).jpg`; the original is untouched. Select several images to resize them all with the same settings.
+
 ## Install
 
 1. Download the latest release from the [Releases page](https://github.com/priyank1b/right-click-file-converter/releases/latest):

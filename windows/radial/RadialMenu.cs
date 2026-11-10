@@ -56,7 +56,7 @@ namespace RadialConvert
         {
             switch (kind)
             {
-                case "image": return new[] { "png", "jpg", "webp", "bmp", "gif", "tiff", "ico", "pdf" };
+                case "image": return new[] { "png", "jpg", "webp", "bmp", "gif", "tiff", "ico", "pdf", "resize" };
                 case "video": return new[] { "mp4", "mkv", "avi", "mov", "webm", "gif", "mp3", "wav", "m4a", "flac" };
                 case "audio": return new[] { "mp3", "wav", "flac", "aac", "m4a", "ogg", "opus" };
                 case "doc": return new[] { "pdf", "docx", "odt", "rtf", "txt", "html" };
@@ -147,6 +147,7 @@ namespace RadialConvert
             if (kind == "video" && target == "gif") return "animated";
             if (kind == "pdf" && (target == "png" || target == "jpg")) return "per page";
             if (kind == "pdf" && (target == "docx" || target == "odt" || target == "txt")) return "approx.";
+            if (kind == "image" && target == "resize") return "px or KB";
             if (kind == "ai" && target == "cdr") return "CorelDRAW";
             if (kind == "ai" && target != "pdf") return "per artboard";
             return "";
@@ -980,6 +981,14 @@ namespace RadialConvert
         void Convert(List<string> files, string target)
         {
             string vbs = Path.Combine(appDir, "Launch.vbs");
+            if (target == "resize")
+            {
+                // one launch for the whole selection, so the resize options are asked only once
+                var cmd = new System.Text.StringBuilder("\"" + vbs + "\" \"" + files[0] + "\" \"resize\"");
+                for (int i = 1; i < files.Count; i++) cmd.Append(" \"" + files[i] + "\"");
+                try { Process.Start(new ProcessStartInfo("wscript.exe", cmd.ToString()) { UseShellExecute = false }); } catch { }
+                return;
+            }
             foreach (string f in files)
             {
                 if (Routing.Normalize(Path.GetExtension(f).TrimStart('.')) == target) continue;

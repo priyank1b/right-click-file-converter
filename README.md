@@ -30,6 +30,7 @@ Each version lives in its own folder and is released together; use only the one 
 | PDF | PDF | DOCX, ODT, TXT, or one PNG/JPG per page |
 | Markdown / HTML / EPUB | MD, HTML, EPUB | DOCX, HTML, MD, TXT, EPUB, PDF |
 | Illustrator (Windows) | AI | SVG, PDF, EPS, PNG, JPG, and CDR when CorelDRAW is installed |
+| Resize (Windows) | Any image | Same picture at a set pixel size, percent, or under a file size limit (KB / MB) |
 
 Under the hood it uses [FFmpeg](https://ffmpeg.org/), [ImageMagick](https://imagemagick.org/), [Ghostscript](https://ghostscript.com/), [Pandoc](https://pandoc.org/), [LibreOffice](https://www.libreoffice.org/) and [pdf2docx](https://github.com/ArtifexSoftware/pdf2docx). The installer sets up whatever is missing; the first install downloads about 1 GB.
 

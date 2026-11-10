@@ -3,6 +3,17 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-11-10
+
+### Added
+- **Windows: Resize for images.** A new **RESIZE** slice (and list entry) for image files opens a small dialog:
+  - **Size in pixels**: width and/or height with *Keep proportions* (an empty box is worked out), or an exact width x height; or a percent of the original.
+  - **File size limit** (KB or MB): for sites that ask for "under 200 KB". Works with JPG and WebP by lowering the quality and, if needed, the pixel size until the file fits; other formats switch to JPG.
+  - **Save as**: keep the original format, or JPG / PNG / WebP.
+  - Photos are rotated the right way up (EXIF) and results are saved as `name (resized).ext`; originals are never changed.
+  - Selecting several images asks once and applies the same settings to all of them.
+- `Launch.vbs` accepts extra files after the target format so a whole selection starts one conversion.
+
 ## [1.4.1] - 2026-11-10
 
 ### Fixed
