@@ -155,18 +155,32 @@ if (-not $DryRun) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $f) -Destination $dest -Force
     }
 
-    # pdf2docx in a private Python environment (LibreOffice is the fallback if this fails)
+    # pdf2docx (and PyMuPDF, which it brings) in a private Python environment.
+    # Used for better PDF to Word and for AI to SVG. Checked on every run, so a reinstall
+    # repairs an environment whose earlier setup failed (e.g. the connection dropped).
     $venvPy = Join-Path $dest 'pyenv\Scripts\python.exe'
-    if (-not (Test-Path -LiteralPath $venvPy)) {
-        $py = Get-RealPython
-        if ($py) {
-            Write-Host '--> pdf2docx (better PDF to Word)' -ForegroundColor Yellow
-            & $py -m venv (Join-Path $dest 'pyenv')
+    Write-Host '--> pdf2docx + PyMuPDF (better PDF to Word, AI to SVG)' -ForegroundColor Yellow
+    $pyOk = $false
+    if (Test-Path -LiteralPath $venvPy) {
+        & $venvPy -I -c 'import pdf2docx, pymupdf' 2>$null
+        $pyOk = ($LASTEXITCODE -eq 0)
+    }
+    if ($pyOk) {
+        Write-Host '    already installed' -ForegroundColor Green
+    } else {
+        if (-not (Test-Path -LiteralPath $venvPy)) {
+            # a half-made environment without python.exe can't be repaired; start over
+            Remove-Item -LiteralPath (Join-Path $dest 'pyenv') -Recurse -Force -ErrorAction SilentlyContinue
+            $py = Get-RealPython
+            if ($py) { & $py -m venv (Join-Path $dest 'pyenv') }
+        }
+        if (Test-Path -LiteralPath $venvPy) {
             & $venvPy -m pip install --quiet --disable-pip-version-check --retries 5 --timeout 60 pdf2docx
+            & $venvPy -I -c 'import pdf2docx, pymupdf' 2>$null
             if ($LASTEXITCODE -eq 0) { Write-Host '    installed' -ForegroundColor Green }
-            else { Write-Host '    could not install - PDF to Word will use LibreOffice (lower quality)' -ForegroundColor DarkYellow }
+            else { Write-Host '    could not install - PDF to Word will use LibreOffice (lower quality) and AI to SVG is unavailable. Run the installer again to retry.' -ForegroundColor DarkYellow }
         } else {
-            Write-Host 'Python not available - PDF to Word will use LibreOffice (lower quality).' -ForegroundColor DarkYellow
+            Write-Host '    Python not available - PDF to Word will use LibreOffice (lower quality) and AI to SVG is unavailable.' -ForegroundColor DarkYellow
         }
     }
 

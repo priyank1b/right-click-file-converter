@@ -212,7 +212,9 @@ namespace RadialConvert
             }
             if (tool == "svgpy")
             {
-                v = File.Exists(Path.Combine(appDir, @"pyenv\Scripts\python.exe")) && File.Exists(Path.Combine(appDir, "ai_svg_run.py"));
+                // python alone isn't enough: PyMuPDF must have installed into the environment
+                v = File.Exists(Path.Combine(appDir, @"pyenv\Scripts\python.exe")) && File.Exists(Path.Combine(appDir, "ai_svg_run.py"))
+                    && Directory.Exists(Path.Combine(appDir, @"pyenv\Lib\site-packages\pymupdf"));
                 cache[tool] = v;
                 return v;
             }

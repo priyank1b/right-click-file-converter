@@ -40,7 +40,8 @@ $tools.gs = Find-Tool 'gswin64c.exe' @("$env:ProgramFiles\gs\gs*\bin\gswin64c.ex
 # AI -> SVG uses PyMuPDF from the same Python environment
 $tools.svgpy = $null
 $svgRun = Join-Path $PSScriptRoot 'ai_svg_run.py'
-if ((Test-Path -LiteralPath $pyExe) -and (Test-Path -LiteralPath $svgRun)) { $tools.svgpy = $pyExe }
+$pyMu = Join-Path $env:LOCALAPPDATA 'RightClickConverter\pyenv\Lib\site-packages\pymupdf'
+if ((Test-Path -LiteralPath $pyExe) -and (Test-Path -LiteralPath $svgRun) -and (Test-Path -LiteralPath $pyMu)) { $tools.svgpy = $pyExe }
 # AI -> CDR needs CorelDRAW itself (only it can write .cdr files)
 $tools.corel = $null
 $cdrRun = Join-Path $PSScriptRoot 'ai2cdr.ps1'

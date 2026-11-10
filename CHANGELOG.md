@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.4.1] - 2026-11-10
+
+### Fixed
+- Windows: reinstalling now repairs the private Python environment (pdf2docx + PyMuPDF) if its earlier setup failed, instead of skipping it because the folder already existed.
+- Windows: AI to SVG is only offered when PyMuPDF is actually installed, so it no longer shows up and then fails on PCs without it.
+
 ## [1.4.0] - 2026-11-10
 
 ### Added
