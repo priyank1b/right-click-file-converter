@@ -32,6 +32,24 @@ Each version lives in its own folder and is released together; use only the one 
 | Illustrator (Windows) | AI | SVG, PDF, EPS, PNG, JPG, and CDR when CorelDRAW is installed |
 | Resize (Windows) | Any image | Same picture at a set pixel size, percent, or under a file size limit (KB / MB) |
 
+## Screenshots
+
+Right-click a file (or select it and press the hotkey) and a ring of formats appears at the mouse pointer. The ring only lists what makes sense for that file. Here it is for every type of file (Windows):
+
+<p align="center"><img src="docs/images/overview.jpg" alt="The format ring for images, video, audio, documents, spreadsheets, presentations, PDF, Markdown, HTML, EPUB and Illustrator files" width="820"></p>
+
+| | |
+|---|---|
+| <img src="docs/images/ring-image.jpg" alt="Ring for an image, with the RESIZE slice highlighted" width="380"><br>**Images**: PNG, JPG, WEBP, BMP, GIF, TIFF, ICO, PDF, and **RESIZE** | <img src="docs/images/ring-ai.jpg" alt="Ring for an Illustrator file, with CDR highlighted" width="380"><br>**Illustrator (.ai)**: CDR (needs CorelDRAW), SVG, PDF, EPS, PNG, JPG |
+
+**Resize** opens a small dialog: set a size in pixels or a percent, optionally keep the file under a size limit (KB / MB), and choose the output format.
+
+| Empty | Filled in (1000 px wide, under 100 KB, JPG) |
+|---|---|
+| <img src="docs/images/resize-dialog.png" alt="The Resize dialog" width="300"> | <img src="docs/images/resize-dialog-filled.png" alt="The Resize dialog filled in" width="300"> |
+
+More rings: [video](docs/images/ring-video.jpg), [audio](docs/images/ring-audio.jpg), [documents](docs/images/ring-doc.jpg), [spreadsheets](docs/images/ring-sheet.jpg), [presentations](docs/images/ring-slides.jpg), [PDF](docs/images/ring-pdf.jpg), [Markdown](docs/images/ring-md.jpg), [HTML](docs/images/ring-html.jpg), [EPUB](docs/images/ring-epub.jpg).
+
 Under the hood it uses [FFmpeg](https://ffmpeg.org/), [ImageMagick](https://imagemagick.org/), [Ghostscript](https://ghostscript.com/), [Pandoc](https://pandoc.org/), [LibreOffice](https://www.libreoffice.org/) and [pdf2docx](https://github.com/ArtifexSoftware/pdf2docx). The installer sets up whatever is missing; the first install downloads about 1 GB.
 
 ## Repository layout

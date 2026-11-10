@@ -20,7 +20,13 @@ Adds a **Convert to...** entry to the Windows right-click menu. Pick a file, cho
 | Markdown / HTML / EPUB | MD, HTML, EPUB | DOCX, HTML, MD, TXT, EPUB, PDF |
 | Illustrator | AI | SVG, PDF, EPS, PNG, JPG (one per artboard), and CDR when CorelDRAW is installed |
 
+### Screenshots
+
+<p align="center"><img src="../docs/images/overview.jpg" alt="The format ring for every type of file" width="820"></p>
+
 ### Resize images
+
+<img src="../docs/images/resize-dialog-filled.png" alt="The Resize dialog filled in: 1000 px wide, under 100 KB, JPG" width="300" align="right">
 
 Choose **RESIZE** in the ring (or list) for any image to change its size without changing what it is:
 

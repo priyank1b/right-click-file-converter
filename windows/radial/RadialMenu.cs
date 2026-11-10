@@ -1085,7 +1085,8 @@ namespace RadialConvert
                 string kind = args.Length > 2 ? args[2] : "image";
                 int hov = args.Length > 3 ? int.Parse(args[3]) : -1;
                 var targets = Routing.TargetsFor(kind).ToList();
-                var v = new RadialVisual(targets, kind, kind == "video" ? "holiday.mp4" : "photo.png", (byte)0x66);
+                string shown = args.Length > 4 ? args[4] : (kind == "video" ? "holiday.mp4" : "photo.png");
+                var v = new RadialVisual(targets, kind, shown, (byte)0x66);
                 v.SetHover(hov);
                 // busy colourful backdrop so the translucency is visible (real blur is only applied live)
                 var busy = new LinearGradientBrush();
